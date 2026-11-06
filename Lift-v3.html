@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  ⁠<script>const password = "Ad!thya369"; const input = prompt("Enter password:"); if (input !== password) { document.body.innerHTML = "Access Denied"; } </script>⁠
+  <script>const password = "Ad!thya369"; const input = prompt("Enter password:"); if (input !== password) { document.body.innerHTML = "Access Denied"; } </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Lift</title>
@@ -132,7 +132,7 @@ S.workouts.forEach(w=>w.ex.forEach(e=>{names[e.n]=(names[e.n]||0)+1}));
 const list=Object.keys(names).sort((a,b)=>names[b]-names[a]).map(n=>`<button class='pick' data-a='exd' data-n='${esc(n)}'><span>${esc(n)}</span><span class='badge'>${names[n]} sessions</span></button>`).join('')||`<div class='empty'>Exercises you log will show up here.</div>`;
 return`<div class='row between'><h1>${esc(S.user.name||'Profile')}</h1><button class='chip' data-a='settings'>Settings</button></div><div class='grid2'><div class='card'><span class='badge'>Workouts</span><h2 style='margin:4px 0 0'>${S.workouts.length}</h2></div><div class='card'><span class='badge'>Total volume</span><h2 style='margin:4px 0 0'>${fw(S.workouts.reduce((a,w)=>a+vol(w.ex),0))} ${U()}</h2></div></div>${bwCard()}<div class='pills'>${[['dur','Duration'],['vol','Volume'],['rep','Reps']].map(x=>`<button class='${m===x[0]?'on':''}' data-a='met' data-v='${x[0]}'>${x[1]}</button>`).join('')}</div>${chart(ws.map(w=>({x:w.start,y:f(w)})),lab)}<h2>Exercises</h2>${list}`}
 function exv(){const n=V.n,m=V.m||'best',hs=hist(n),lab={best:'Heaviest weight',orm:'Est. one rep max',vol:'Best session volume'},pr=k=>fw(Math.max(0,...hs.map(x=>x[k])));
-const mHtml = `<div class='ex-media'><video src='${esc(n)}.mp4' autoplay loop muted playsinline onerror="this.style.display='none'"></video><img src='${esc(n)}.gif' onerror="this.style.display='none'"></div>`;
+const mHtml = `<div class='ex-media'><video autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;"></video></div>`;
 return`<button class='back' data-a='back'>&#8249;</button><h1>${esc(n)}</h1>${mHtml}<div class='pills'>${Object.keys(lab).map(k=>`<button class='${m===k?'on':''}' data-a='met' data-v='${k}'>${lab[k]}</button>`).join('')}</div>${chart(hs.map(x=>({x:x.t,y:fw(x[m])})),lab[m]+' ('+U()+')')}<h2>Personal records</h2><div class='card'><div class='row between'><span>Heaviest weight</span><b>${pr('best')} ${U()}</b></div><div class='row between'><span>Est. one rep max</span><b>${pr('orm')} ${U()}</b></div><div class='row between'><span>Best session volume</span><b>${pr('vol')} ${U()}</b></div></div><h2>History</h2>${hs.slice().reverse().map(x=>`<div class='card'><b>${dt(x.t)}</b><div class='tip'>${x.sets.filter(s=>s.d&&!s.w).map(s=>fw(s.k)+' × '+s.r).join(' · ')}</div></div>`).join('')||`<div class='empty'>No history yet.</div>`}`}
 function wdet(){const w=S.workouts.find(x=>x.id===V.id);if(!w)return`<button class='back' data-a='back'>&#8249;</button>`;
 return`<button class='back' data-a='back'>&#8249;</button><h1>${esc(w.name)}</h1><p class='sub'>${dt(w.start)} · ${dur(w.dur)} · ${fw(vol(w.ex))} ${U()}</p>${w.ex.map(e=>`<b data-a='exd' data-n='${esc(e.n)}' style='display:block;margin-top:14px;color:var(--ac)'>${esc(e.n)}</b>${e.note?`<div class='tip'>${esc(e.note)}</div>`:''}<div class='tip'>${e.sets.map(s=>(s.w?'W ':'')+fw(s.k)+' × '+s.r).join(' · ')}</div>`).join('')}<button class='btn alt' style='margin:20px 0 10px' data-a='hsave' data-i='${w.id}'>Save as routine</button><button class='btn danger' data-a='hdel' data-i='${w.id}'>Delete workout</button>`}
@@ -148,7 +148,9 @@ function rest(sec){if(!sec)return;restEnd=Date.now()+sec*1e3;const b=$('#restBar
 function startW(name,l){if(S.active){toast('Finish or discard the current workout first');return}S.active={name,start:Date.now(),ex:l.map(e=>mkEx(e.n,e.sets,e.reps))};save();nav({s:'active'})}
 function finish(){const a=S.active,ex=a.ex.map(e=>({n:e.n,rest:e.rest,note:e.note,sets:e.sets.filter(s=>s.d).map(s=>({k:+s.k||0,r:+s.r||0,w:s.w,d:1}))})).filter(e=>e.sets.length);if(!ex.length)return toast('Complete at least one set first');S.workouts.push({id:uid(),name:a.name||wname(),start:a.start,dur:Math.round((Date.now()-a.start)/1e3),ex});S.active=null;restEnd=0;$('#restBar').classList.add('hidden');save();V={t:'home'};render();toast('Workout saved')}
 function render(){let h,hide=false;if(!S.user.done){h=onb();hide=true}else if(V.s==='active'){h=activeV();hide=true}else if(V.s==='edit'){h=editR();hide=true}else if(V.s==='explore')h=explore();else if(V.s==='ex')h=exv();else if(V.s==='hist')h=wdet();else h={home,workout:wtab,profile:prof}[V.t]();
-$('#app').innerHTML=h;$('#tabbar').classList.toggle('hidden',hide);document.querySelectorAll('#tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.tab===V.t));stats();tick()}
+$('#app').innerHTML=h;$('#tabbar').classList.toggle('hidden',hide);document.querySelectorAll('#tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.tab===V.t));stats();tick();
+if(V.s==='ex') fetchExerciseVideo(V.n); // <-- ADDED: Triggers the video API!
+}
 function nav(n){n.t=n.t||V.t;n.back=V;V=n;render();scrollTo(0,0)}
 function tab(t){V={t};render();scrollTo(0,0)}
 const A={
@@ -203,8 +205,8 @@ else if(p[0]==='a'){const e=S.active.ex[+p[1]];if(p.length===3)e[p[2]]=t.value;e
 document.addEventListener('click',ev=>{const t=ev.target;if(t.id==='sheet'){closeS();return}const tb=t.closest('[data-tab]');if(tb){tab(tb.dataset.tab);return}const a=t.closest('[data-a]');if(a&&A[a.dataset.a])A[a.dataset.a](a.dataset)});
 setInterval(tick,500);
 render();
- const workoutXKey = "wx_1996c7b9eab709aeec1f5a59c8fb417be3fa851081cc43f3520905dd";
 
+const workoutXKey = "wx_1996c7b9eab709aeec1f5a59c8fb417be3fa851081cc43f3520905dd";
 async function fetchExerciseVideo(exerciseName) {
   try {
     const response = await fetch(`https://workoutxapp.com/api/v1/exercises?search=${encodeURIComponent(exerciseName)}`, {
@@ -214,11 +216,12 @@ async function fetchExerciseVideo(exerciseName) {
     });
     const data = await response.json();
     
-    // Finds the video element in your app and updates its source
     const videoElement = document.querySelector('video');
-    if (data && data[0]?.video && videoElement) {
+    if (data && data.length > 0 && data[0]?.video && videoElement) {
       videoElement.src = data[0].video;
       videoElement.play();
+    } else if (videoElement) {
+      videoElement.style.display = 'none'; // Hide the box if no video is found
     }
   } catch (error) {
     console.error("Error loading WorkoutX video:", error);
