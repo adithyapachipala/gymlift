@@ -1,7 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>const password = "Ad!thya369"; const input = prompt("Enter password:"); if (input !== password) { document.body.innerHTML = "Access Denied"; } </script>
+<!-- Password temporarily commented out for testing so it doesn't block you -->
+<!-- 
+<script>
+  const password = "Ad!thya369"; 
+  const input = prompt("Enter password:"); 
+  if (input !== password) { 
+    document.body.innerHTML = "<h1 style='color:white; text-align:center; margin-top:50px;'>Access Denied</h1>"; 
+    throw new Error("Access Denied");
+  }
+</script> 
+-->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Lift</title>
@@ -147,9 +157,27 @@ function tick(){const n=Date.now(),b=$('#restBar');if(restEnd){const l=(restEnd-
 function rest(sec){if(!sec)return;restEnd=Date.now()+sec*1e3;const b=$('#restBar');b.innerHTML=`<span>Rest <b id='rt'></b></span><span><button data-a='radd' data-v='-15'>-15s</button><button data-a='radd' data-v='15'>+15s</button><button data-a='rskip'>Skip</button></span>`;b.classList.remove('hidden');tick()}
 function startW(name,l){if(S.active){toast('Finish or discard the current workout first');return}S.active={name,start:Date.now(),ex:l.map(e=>mkEx(e.n,e.sets,e.reps))};save();nav({s:'active'})}
 function finish(){const a=S.active,ex=a.ex.map(e=>({n:e.n,rest:e.rest,note:e.note,sets:e.sets.filter(s=>s.d).map(s=>({k:+s.k||0,r:+s.r||0,w:s.w,d:1}))})).filter(e=>e.sets.length);if(!ex.length)return toast('Complete at least one set first');S.workouts.push({id:uid(),name:a.name||wname(),start:a.start,dur:Math.round((Date.now()-a.start)/1e3),ex});S.active=null;restEnd=0;$('#restBar').classList.add('hidden');save();V={t:'home'};render();toast('Workout saved')}
-function render(){let h,hide=false;if(!S.user.done){h=onb();hide=true}else if(V.s==='active'){h=activeV();hide=true}else if(V.s==='edit'){h=editR();hide=true}else if(V.s==='explore')h=explore();else if(V.s==='ex')h=exv();else if(V.s==='hist')h=wdet();else h={home,workout:wtab,profile:prof}[V.t]();
-$('#app').innerHTML=h;$('#tabbar').classList.toggle('hidden',hide);document.querySelectorAll('#tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.tab===V.t));stats();tick();
-if(V.s==='ex') fetchExerciseVideo(V.n); 
+
+function render(){
+  let h,hide=false;
+  if(!S.user.done){h=onb();hide=true}
+  else if(V.s==='active'){h=activeV();hide=true}
+  else if(V.s==='edit'){h=editR();hide=true}
+  else if(V.s==='explore')h=explore();
+  else if(V.s==='ex')h=exv();
+  else if(V.s==='hist')h=wdet();
+  else h={home,workout:wtab,profile:prof}[V.t]();
+
+  $('#app').innerHTML=h;
+  $('#tabbar').classList.toggle('hidden',hide);
+  document.querySelectorAll('#tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.tab===V.t));
+  stats();
+  tick();
+
+  // Triggers the video API fetch when opening an exercise
+  if(V.s==='ex') {
+    fetchExerciseVideo(V.n); 
+  }
 }
 function nav(n){n.t=n.t||V.t;n.back=V;V=n;render();scrollTo(0,0)}
 function tab(t){V={t};render();scrollTo(0,0)}
@@ -204,9 +232,54 @@ else if(p[0]==='r'){if(p[1]==='name')V.r.name=t.value;else V.r.ex[+p[1]][p[2]]=t
 else if(p[0]==='a'){const e=S.active.ex[+p[1]];if(p.length===3)e[p[2]]=t.value;else{const s=e.sets[+p[2]];s[p[3]]=p[3]==='k'?(t.value===''?'':tk(t.value)):t.value}save();stats()}});
 document.addEventListener('click',ev=>{const t=ev.target;if(t.id==='sheet'){closeS();return}const tb=t.closest('[data-tab]');if(tb){tab(tb.dataset.tab);return}const a=t.closest('[data-a]');if(a&&A[a.dataset.a])A[a.dataset.a](a.dataset)});
 setInterval(tick,500);
+
+// Run the app!
 render();
 
 const workoutXKey = "wx_540e5af33a95009007a719ef519f0d175a0e06a0ad3e3b200143e2a4";
+
 async function fetchExerciseVideo(exerciseName) {
   try {
-    // Automatically strip out parentheses to create a flexible search term (e.g., "Bench Press (Barbell
+    // Strips out parentheses to create a flexible search term (e.g., "Bench Press (Barbell)" -> "Bench Press")
+    const cleanQuery = exerciseName.split('(')[0].trim();
+
+    const response = await fetch(`https://api.workoutxapp.com/v2/exercises?name=${encodeURIComponent(cleanQuery)}`, {
+      headers: {
+        'X-WorkoutX-Key': workoutXKey
+      }
+    });
+    
+    if (!response.ok) {
+      console.error("WorkoutX API Error:", response.status);
+      return;
+    }
+
+    const data = await response.json();
+    const videoElement = document.querySelector('video');
+    
+    // Stop if the video element isn't found
+    if (!videoElement) return;
+
+    const videoList = Array.isArray(data) ? data : (data.results || data.data || []);
+    
+    // Scan the results and grab the first one that actually contains a video file
+    const matchedExercise = videoList.find(ex => ex.video);
+    
+    if (matchedExercise && matchedExercise.video) {
+      videoElement.style.display = 'block';
+      videoElement.src = matchedExercise.video;
+      // Play handles promise to prevent browser autoplay errors
+      videoElement.play().catch(e => console.log("Video autoplay prevented:", e));
+    } else {
+      // Quietly hide the video block if no video is found in the database
+      videoElement.style.display = 'none';
+    }
+  } catch (error) {
+    console.error("WorkoutX Network error:", error.message);
+  }
+}
+
+})();
+</script>
+</body>
+</html>
