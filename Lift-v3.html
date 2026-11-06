@@ -207,16 +207,22 @@ setInterval(tick,500);
 render();
 
 const workoutXKey = "wx_540e5af33a95009007a719ef519f0d175a0e06a0ad3e3b200143e2a4";
+
 async function fetchExerciseVideo(exerciseName) {
   try {
-    const response = await fetch(`https://api.workoutxapp.com/v2/exercises?search=${encodeURIComponent(exerciseName)}`, {
+    // This removes parentheses and the text inside them: "Bench Press (Barbell)" -> "Bench Press"
+    const cleanQuery = exerciseName.replace(/\s*\([^)]*\)/g, '').trim();
+
+    const response = await fetch(`https://api.workoutxapp.com/v2/exercises?search=${encodeURIComponent(cleanQuery)}`, {
       headers: {
         'X-WorkoutX-Key': workoutXKey
       }
     });
     
     if (!response.ok) {
-      alert("API Error: " + response.status);
+      // This will now capture the exact error reason from the server
+      const errorText = await response.text();
+      alert(`API Error ${response.status}: ${errorText}`);
       return;
     }
 
@@ -230,13 +236,14 @@ async function fetchExerciseVideo(exerciseName) {
       videoElement.src = videoList[0].video;
       videoElement.play();
     } else {
-      alert("No video found for: " + exerciseName);
+      alert("No video found for: " + cleanQuery);
       if (videoElement) videoElement.style.display = 'none';
     }
   } catch (error) {
     alert("Network error: " + error.message);
   }
 }
+
 
 })();
 </script>
